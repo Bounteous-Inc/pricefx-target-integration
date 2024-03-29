@@ -161,7 +161,6 @@ async function loadEager(doc) {
     document.body.classList.add('appear');
     await waitForLCP(LCP_BLOCKS);
   }
-  
 
   try {
     /* if desktop (proxy for fast connection) or fonts already loaded, load fonts.css */
