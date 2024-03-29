@@ -87,11 +87,10 @@ export function decorateMain(main) {
   decorateBlocks(main);
 }
 
-function initWebSDK(path, config) {
+function initATJS(path, config) {
+  window.targetGlobalSettings = config;
   return new Promise((resolve) => {
-    import(path)
-      .then(() => window.alloy('configure', config))
-      .then(resolve);
+    import(path).then(resolve);
   });
 }
 
@@ -118,35 +117,25 @@ function onDecoratedElement(fn) {
   observer.observe(document.querySelector('body'), { childList: true });
 }
 
-async function getAndApplyRenderDecisions() {
-  // Get the decisions, but don't render them automatically
-  // so we can hook up into the AEM EDS page load sequence
-  const response = await window.alloy('sendEvent', { renderDecisions: false });
-
-  onDecoratedElement(() => window.alloy('applyPropositions', { propositions: response.propositions }));
-
-  // Reporting is deferred to avoid long tasks
-  window.setTimeout(() => {
-    // Report shown decisions
-    window.alloy('sendEvent', {
-      xdm: {
-        eventType: 'decisioning.propositionDisplay',
-        _experience: {
-          decisioning: {
-            propositions: response.propositions,
-          },
-        },
-      },
-    });
-  });
+async function getAndApplyOffers() {
+  const response = await window.adobe.target.getOffers({ request: { execute: { pageLoad: {} } } });
+  onDecoratedElement(() => window.adobe.target.applyOffers({ response }));
 }
 
-let alloyLoadedPromise = initWebSDK('./alloy.js', {
-    datastreamId: '/* your datastream id here, formally edgeConfigId */',
-    orgId: '/* your ims org id here */',
-  });;
-if (getMetadata('target') {
-  alloyLoadedPromise.then(() => getAndApplyRenderDecisions());
+let atjsPromise = Promise.resolve();
+if (getMetadata('target')) {
+  atjsPromise = initATJS('./at.js', {
+    clientCode: 'pricefx',
+    serverDomain: 'pricefx.tt.omtrdc.net',
+    imsOrgId: '3C5070676047F8E80A495CC2@AdobeOrg',
+    bodyHidingEnabled: false,
+    cookieDomain: window.location.hostname,
+    pageLoadEnabled: false,
+    secureOnly: true,
+    viewsEnabled: false,
+    withWebGLRenderer: false,
+  });
+  document.addEventListener('at-library-loaded', () => getAndApplyOffers());
 }
 
 /**
@@ -159,9 +148,19 @@ async function loadEager(doc) {
   const main = doc.querySelector('main');
   if (main) {
     decorateMain(main);
+    // wait for atjs to finish loading
+    await atjsPromise;
+    // show the LCP block in a dedicated frame to reduce TBT
+    await new Promise((resolve) => {
+      window.requestAnimationFrame(async () => {
+        await waitForLCP(LCP_BLOCKS);
+        resolve();
+      });
+    });
     document.body.classList.add('appear');
     await waitForLCP(LCP_BLOCKS);
   }
+  
 
   try {
     /* if desktop (proxy for fast connection) or fonts already loaded, load fonts.css */
