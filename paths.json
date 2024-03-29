@@ -1,5 +1,7 @@
 {
   "mappings": [
-    "/content/pricefx-target-integration/:/"
+    "/content/pricefx-target-integration/:/",
+    "/content/pricefx-target-integration/metadata.json:/metadata.json"
+
   ]
 }
