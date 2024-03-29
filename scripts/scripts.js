@@ -87,6 +87,68 @@ export function decorateMain(main) {
   decorateBlocks(main);
 }
 
+function initWebSDK(path, config) {
+  return new Promise((resolve) => {
+    import(path)
+      .then(() => window.alloy('configure', config))
+      .then(resolve);
+  });
+}
+
+function onDecoratedElement(fn) {
+  // Apply propositions to all already decorated blocks/sections
+  if (document.querySelector('[data-block-status="loaded"],[data-section-status="loaded"]')) {
+    fn();
+  }
+
+  const observer = new MutationObserver((mutations) => {
+    if (mutations.some((m) => m.target.tagName === 'BODY'
+      || m.target.dataset.sectionStatus === 'loaded'
+      || m.target.dataset.blockStatus === 'loaded')) {
+      fn();
+    }
+  });
+  // Watch sections and blocks being decorated async
+  observer.observe(document.querySelector('main'), {
+    subtree: true,
+    attributes: true,
+    attributeFilter: ['data-block-status', 'data-section-status'],
+  });
+  // Watch anything else added to the body
+  observer.observe(document.querySelector('body'), { childList: true });
+}
+
+async function getAndApplyRenderDecisions() {
+  // Get the decisions, but don't render them automatically
+  // so we can hook up into the AEM EDS page load sequence
+  const response = await window.alloy('sendEvent', { renderDecisions: false });
+
+  onDecoratedElement(() => window.alloy('applyPropositions', { propositions: response.propositions }));
+
+  // Reporting is deferred to avoid long tasks
+  window.setTimeout(() => {
+    // Report shown decisions
+    window.alloy('sendEvent', {
+      xdm: {
+        eventType: 'decisioning.propositionDisplay',
+        _experience: {
+          decisioning: {
+            propositions: response.propositions,
+          },
+        },
+      },
+    });
+  });
+}
+
+let alloyLoadedPromise = initWebSDK('./alloy.js', {
+    datastreamId: '/* your datastream id here, formally edgeConfigId */',
+    orgId: '/* your ims org id here */',
+  });;
+if (getMetadata('target') {
+  alloyLoadedPromise.then(() => getAndApplyRenderDecisions());
+}
+
 /**
  * Loads everything needed to get to LCP.
  * @param {Element} doc The container element
