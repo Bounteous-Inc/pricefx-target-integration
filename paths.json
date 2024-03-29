@@ -3,5 +3,8 @@
     "/content/pricefx-target-integration/:/",
     "/content/pricefx-target-integration/metadata:/metadata.json"
 
+  ],
+  "includes": [
+    "/content/pricefx-target-integratio"
   ]
 }
