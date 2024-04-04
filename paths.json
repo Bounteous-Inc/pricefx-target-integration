@@ -5,6 +5,6 @@
     "/content/pricefx-target-integration/test-demo/header:/header.json",
   ],
   "includes": [
-    "/content/pricefx-target-integratio"
+    "/content/pricefx-target-integration"
   ]
 }
