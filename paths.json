@@ -2,9 +2,5 @@
   "mappings": [
     "/content/pricefx-target-integration/:/",
     "/content/pricefx-target-integration/metadata:/metadata.json",
-    "/content/pricefx-target-integration/test-demo/header:/header.json",
-  ],
-  "includes": [
-    "/content/pricefx-target-integration"
   ]
 }
